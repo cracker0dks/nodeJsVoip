@@ -1,5 +1,5 @@
 # nodeJsVoip
-An simple nodeJs Websocket VOIP application without the use of WebRTC
+An simple nodeJs Websocket VOIP application without the use of WebRTC and extra Servers like TURN or STUN. No client proxy!
 
 #How to install the Server
 1. install node
@@ -11,3 +11,6 @@ An simple nodeJs Websocket VOIP application without the use of WebRTC
 2. Host the Webcontent on a webserver
 
 Now you can visit the index.html on your webserver!
+
+
+TODO: improve sound quallity
