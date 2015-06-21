@@ -1,3 +1,6 @@
+var serverIp = "78.31.64.252";
+var serverPort = "9002";
+
 var commonSampleRates = [8000,11025,12000,16000,22050,24000,32000,37800,44100,44056,47250,48000,50000,50400,88200,96000,176400,192000,2822400,5644800];
 var commonBitRates = [8,16,32];
 var mySampleRate = 8000;
@@ -40,7 +43,7 @@ var upSampleWorker = new Worker('./js/voipWorker.js');
 var steamBuffer = {}; //Buffers incomeing audio
 var wsConnect = false; //is true if client is connected
 
-var myWebSocket = new WebSocket("ws://127.0.0.1:9002");
+var myWebSocket = new WebSocket("ws://"+serverIp+":"+serverPort);
 myWebSocket.binaryType = "arraybuffer";
 
 myWebSocket.onopen = function(evt) { 
