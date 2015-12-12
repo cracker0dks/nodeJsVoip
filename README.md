@@ -12,6 +12,6 @@ An simple nodeJs Websocket VOIP application without the use of WebRTC and extra 
 
 Now you can visit the index.html on your webserver!
 
-NOTE: Chrome only allow getUserMedia on SSL servers from now on. So be sure to use HTTPS.
+###NOTE: Chrome only allow getUserMedia on SSL servers from now on. So be sure to use HTTPS.###
 
 TODO: improve sound quallity
