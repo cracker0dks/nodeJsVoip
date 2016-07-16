@@ -4,145 +4,14 @@
 	<meta charset='utf-8'>
 	<title>NodeVoip</title>
 	<script type="text/javascript"src="./js/jquery-2.1.3.min.js"></script>
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-	<script type="text/javascript"src="./js/jquery.nouislider.min.js"></script>
-	<script type="text/javascript"src="./js/material.min.js"></script>
-	<script type="text/javascript"src="./js/ripples.min.js"></script>
-	<script type="text/javascript"src="./js/plot.js"></script>
+	<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 	<script type="text/javascript"src="./js/smooth.js"></script>
-	<script type="text/javascript"src="./js/resampler.js"></script>
-	<script type="text/javascript"src="./js/voip.js"></script>
 	<script type="text/javascript"src="./js/main.js"></script>
 
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
-
-	<link rel="stylesheet" href="./css/material.min.css">
-	<link rel="stylesheet" href="./css/ripples.min.css">
 	<link rel="stylesheet" href="./css/main.css">
 </head>
-<body style="overflow-y: hidden;">
-	<div class="navbar navbar-inverse">
-	    <div class="navbar-header">
-	        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-inverse-collapse">
-	            <span class="icon-bar"></span>
-	            <span class="icon-bar"></span>
-	            <span class="icon-bar"></span>
-	        </button>
-	        <a class="navbar-brand" href="javascript:void(0)">WebVOIP</a>
-	    </div>
-	    <div class="navbar-collapse collapse navbar-inverse-collapse">
-	        <ul class="nav navbar-nav">
-	            <li class="active"><a href="javascript:void(0)">Active</a></li>
-	        </ul>
-	        <ul class="nav navbar-nav navbar-right">
-	        	<li class="onlyIfMicInputIsOn"><a id="toggleSound" href="javascript:void(0)"><i class="mdi-av-volume-up"></i></a></li>
-	        	<li class="onlyIfMicInputIsOn"><a id="toggleMic" href="javascript:void(0)"><i class="mdi-av-mic"></i></a></li>
-	            <li><a data-toggle="modal" data-target="#settingsModal" href="javascript:void(0)"><i class="mdi-action-settings"></i></a></li>
-	        </ul>
-	    </div>
-
-	</div>
-	<div class="row">
-		<div class="col-lg-12">
-			<ul>
-				<span class="label label-default">Server</span>
-				<ul id="clientList">
-				</ul>
-			</ul>
-		</div>
-	</div>
-
-	<div style="height:800px; width:5000py;" id="plot1"></div>
+<body>
 	
-	<div style="position:absolute; width:100%; bottom:0px;">
-		<div style="overflow: auto; min-height:90px; border-top:1px solid black; border-bottom:1px solid black; max-height:200px; width:100%; background:rgb(250, 249, 233);" id="chatContent">
-					
-		</div>
-		<div >
-			<input id="chatInput" style="width:100%" type="text" placeholder="chat text..." class="form-control">
-		</div>
-	</div>
-	
-	<div id="settingsModal" class="modal">
-	    <div class="modal-dialog">
-	        <div class="modal-content">
-		            <div class="modal-header">
-		                <h4 class="modal-title">Settings</h4>
-		            </div>
-		            <div class="modal-body">
-						<div role="tabpanel">
-
-					  <!-- Nav tabs -->
-					  <ul class="nav nav-tabs" role="tablist">
-					    <li role="presentation" class="settingsTab active"><a href="#profile" aria-controls="profile" role="tab" data-toggle="tab">Profile</a></li>
-					    <li role="presentation" class="settingsTab"><a href="#audio" aria-controls="audio" role="tab" data-toggle="tab">Audio</a></li>
-					  </ul>
-
-					  <!-- Tab panes -->
-					  <div class="tab-content">
-					    <div role="tabpanel" class="tab-pane active" id="profile">
-					    	<fieldset class="settingFieldSet">
-					    		<div class="row">
-			            			<label for="nickname" class="col-lg-3">Nickname</label>
-						            <div class="col-lg-9">
-						                 <input type="text" class="form-control" id="nickname" placeholder="Nickname">
-						            </div>
-			        			</div>
-			        			<div style="margin-top: 5px;" class="row">
-			            			<label for="profilpic" class="col-lg-3">Picture</label>
-						            <div class="col-lg-9">
-						                 <div id="profilpic" class="row-picture">
-								            <img id="sProfilePic" style="max-width: 70px;" class="img-circle" src="http://image4.spreadshirt.net/image-server/v1/compositions/23061206/views/1,width=235,height=235,appearanceId=1/Pinguin.jpg" alt="icon">
-								            <input type="text" readonly="" class="form-control floating-label" placeholder="Durchsuchen...">
-                							<input type="file" id="inputProfilePic" >
-								        </div>
-						            </div>
-			        			</div>
-					    	</fieldset>
-					    </div>
-					    <div role="tabpanel" class="tab-pane" id="audio">
-					    	<fieldset style="display:none;" class="settingFieldSet onlyIfMicInputIsOn">
-				            	<div class="row">
-			            			<label for="minGainSlider" class="col-lg-3">Volume Level</label>
-						            <div class="col-lg-9">
-						                <div style="height: 20px; border:1px solid black; margin-bottom:0px; " >
-										    <div id="momentMaxGain" style="width: 60%; height: 100%; background:#009587;"></div>
-										</div>
-						            </div>
-			        			</div>
-				            	<div class="row">
-			            			<label for="minGainSlider" class="col-lg-3">Speaker threshold</label>
-						            <div class="col-lg-9">
-						                <div id="minGainSlider" class="slider svert"></div>
-						            </div>
-			        			</div>
-						        <div class="row">
-			            			<label for="bitrateSelect" class="col-lg-3">Bitrate</label>
-						            <div class="col-lg-9">
-						                <select class="form-control" id="bitrateSelect"></select>
-						            </div>
-			        			</div>
-			        			<div class="row">
-			            			<label for="sampleRateSelect" class="col-lg-3">Samplerate</label>
-						            <div class="col-lg-9">
-						                <select class="form-control" id="sampleRateSelect"></select>
-						            </div>
-			        			</div>
-	            			</fieldset>
-	            			<fieldset class="onlyIfMicInputIsOff">
-	            				No Access to the mic!
-	            			</fieldset>
-					    </div>
-					  </div>
-
-					</div>
-	            </div>
-	            <div class="modal-footer">
-	                <button type="button" data-dismiss="modal" class="btn btn-primary">OK</button>
-	            </div>
-	        </div>
-	    </div>
-	</div>
 </body>
 	
 </html>
