@@ -1,4 +1,4 @@
-var socket = io();
+var socketIO = io();
 
 var soundcardSampleRate = null; //Sample rate from the soundcard (is set at mic access)
 var mySampleRate = 8000; //Samplerate outgoing audio
@@ -17,7 +17,7 @@ function hasGetUserMedia() {
             navigator.mozGetUserMedia || navigator.msGetUserMedia);
 }
 
-io.on('connection', function(socket){
+socketIO.on('connection', function(socket){
 	console.log('socket connected!');
 	socketConnected = true;
 	socket.on('disconnect', function(){
@@ -32,7 +32,7 @@ io.on('connection', function(socket){
 				"inDataArrayBuffer" : data["a"], //Audio data
 				"outSampleRate" : soundcardSampleRate,
 				"outChunkSize" : 2048,
-				"socketId" : data["sid"];
+				"socketId" : data["sid"]
 			});
 		}
 	});
