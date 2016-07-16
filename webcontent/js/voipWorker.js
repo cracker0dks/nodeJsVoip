@@ -1,14 +1,11 @@
-//sample rate mapping... all common sample rates (sorted by usage)
-var commonSampleRates = [12000,16000,44100,48000,8000,24000,11025,22050,32000,37800,44056,47250,50000,50400,88200,96000,176400,192000,2822400,5644800];
+/* This is the VOIP Worker */
+// JOB: transcoding audio
+
 var ok=false;
 self.addEventListener('message', function(e) {
 
 	var data = e.data;
-	if(!ok) { //console log first audio packet
-		console.log(JSON.stringify(data));
-		ok = true;
-	}
-	var inc = data.inc; //data from the client or server (inc == true -> other client data)
+	var inc = data.inc; //true = data is from the server | false = data comeing from client mic
 	var inDataArrayBuffer = data.inDataArrayBuffer; //Incoming Data
 	var inSampleRate = data.inSampleRate;
 	var outSampleRate = data.outSampleRate;
@@ -16,14 +13,10 @@ self.addEventListener('message', function(e) {
 	var outBitRate = data.outBitRate;
 	var outChunkSize = data.outChunkSize;
 	var minGain = data.minGain;
+  var clientId = data.socketId;
 
-	if(inc) { //Data are from an other client, so remove prefix data (sample and bitrate) first
-		var encData = getEncodingInformation(inDataArrayBuffer);
-		inDataArrayBuffer = encData[0];
-		inSampleRate = encData[1];
-		inBitrate = encData[2];
-		var p = encData[3];
-		var clientId = encData[4];
+	if(inc) { //Data are from an other client
+		//inDataArrayBuffer = new ArrayBuffer(inDataArrayBuffer);
 		if(inBitrate==8) {
 			inDataArrayBuffer = new Uint8Array(inDataArrayBuffer);
 		} else if(inBitrate==16) {
@@ -34,8 +27,14 @@ self.addEventListener('message', function(e) {
 			inDataArrayBuffer = null;
 		}
 
+    // if(!ok) { //console log first inc data packet
+    //   console.log(inDataArrayBuffer);
+    //   console.log(JSON.stringify(data));
+    //   ok = true;
+    // }
+
 		if(inDataArrayBuffer!=null) {
-			resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize,clientId, function(resapledData) {
+			resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function(resapledData) {
 				if(inBitrate==8) {
 					resapledData = mapUint8ToFloat32Array(resapledData);
 				} else if(inBitrate==16) {
@@ -49,15 +48,14 @@ self.addEventListener('message', function(e) {
 		}		
 
 	} else { //Data from the client itself (Add encoding information before send it to the server)
-
-		resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, 1, function(resapledData) { //client id set to 1 (dont matter witch number)
+		resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function(resapledData) {
 			
 			var bitratedData = null;
 			if(minGain != null)
 				resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
 
 			if(resapledData != null) {
-				var maxedData = maxSignal(resapledData);
+				var maxedData = {}; //maxSignal(resapledData);
 				maxedData.ret = resapledData;
 				if(outBitRate==8) {
 					bitratedData = mapFloat32ToUInt8Array(maxedData.ret);
@@ -107,10 +105,7 @@ function gainGuard(data, minGain) {
 /*---------------------------------------------------
 		--- CHANGE SAMPLERATE FUNCTIONS --- (No interpolation between samples yet)
 ---------------------------------------------------*/
-var resapelBuffers = {};
-function resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, clientId, doneCallback) {
-	if(typeof(resapelBuffers[clientId])==="undefined")
-		resapelBuffers[clientId] = [];
+function resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, doneCallback) {
 	if(inSampleRate > outSampleRate) {
 		doneCallback(downSample(inSampleRate, outSampleRate, inDataArrayBuffer));
 	} else {
