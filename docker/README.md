@@ -1,2 +1,2 @@
 # How to use this Dockerfile
-coming soon
+read the instructions on the main readme: https://github.com/cracker0dks/nodeJsVoip
