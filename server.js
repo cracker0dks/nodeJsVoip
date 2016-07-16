@@ -11,18 +11,6 @@ var express = require('express');
 var https = require('https');
 var app = express();
 
-app.use(function(req, res, next) {
-    "use strict";
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE');
-    res.header('Access-Control-Allow-Headers', 'origin, content-type', 'X-Requested-With');
-    if (req.method == 'OPTIONS') {
-        res.send(200);
-    } else {
-        next();
-    }
-});
-
 app.use(express.static(__dirname + '/webcontent'));
 
 var privateKey = fs.readFileSync( privateKeyPath );
@@ -53,10 +41,8 @@ io.sockets.on('connection', function (socket) {
 	});
 
 	socket.on('d', function (data) {
-		var newData = {
-			"sid" : socket.id,
-			"a" : data //Audio data
-		}
-		socket.broadcast.emit('d', newData);
+		data["sid"] = socket.id;
+		//console.log(data["a"]);
+		socket.broadcast.emit('d', data);
 	});
 });
