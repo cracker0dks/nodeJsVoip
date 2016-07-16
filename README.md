@@ -8,6 +8,6 @@ An simple nodeJs Websocket VOIP application without the use of WebRTC and extra 
 4. connect to https://myserverip
 
 #How to install the Server with docker
-go to: 
+go to: (comming soon)
 
 TODO: improve sound quallity by implemnting opus
