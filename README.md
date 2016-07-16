@@ -4,15 +4,16 @@ An simple nodeJs Websocket VOIP application without the use of WebRTC and extra 
 > Note: this is just an experiment. Pls use WebRTC if you want to create a professional VOIP application!
 
 #How to install the Server (manually)
-1. Clone or download this repo and go to the "nodeJsVoip" folder
-2. install node deps -> run: "npm install"
-3. start the Server -> run: node server.js
-4. connect to https://myserverip (with 2 tabs or browsers to hear yourself)
+1. Install npm and node
+2. Clone or download this repo and go to the "nodeJsVoip" folder
+3. install node deps -> run: `npm install`
+4. start the Server -> run: `node server.js`
+5. connect to https://myserverip (with 2 tabs or browsers to hear yourself)
 
 #How to install the Server with docker
 You have 2 options for using this app with docker
 ##Use the container from Dockerhub
-`run -d -p 80:80 -p 443:443 rofl256/nodejsvoip"
+`run -d -p 80:80 -p 443:443 rofl256/nodejsvoip`
 
 ##Build your own image with the Dockerfile at the docker folder
 `sudo docker build -t nodejsvoip .`
