@@ -1,0 +1,29 @@
+{
+  "name": "nodejsvoip",
+  "version": "1.0.0",
+  "description": "voip without webrtc",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cracker0dks/nodeJsVoip.git"
+  },
+  "keywords": [
+    "voip"
+  ],
+  "author": "cracker0dks",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cracker0dks/nodeJsVoip/issues"
+  },
+  "homepage": "https://github.com/cracker0dks/nodeJsVoip#readme",
+  "dependencies": {
+    "express": "4.x",
+    "socket.io": "1.x"
+  },
+  "preferGlobal": true,
+  "private": true
+}
