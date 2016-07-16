@@ -1,13 +1,22 @@
 # nodeJsVoip
 An simple nodeJs Websocket VOIP application without the use of WebRTC and extra Servers like TURN or STUN. No client proxy!
 
+> Note: this is just an experiment. Pls use WebRTC if you want to create a professional VOIP application!
+
 #How to install the Server (manually)
-1. Clone this repo and go into the "nodeJsVoip" folder
-2. install node deps. run: "npm install"
-3. start the Server run: node server.js
-4. connect to https://myserverip
+1. Clone or download this repo and go to the "nodeJsVoip" folder
+2. install node deps -> run: "npm install"
+3. start the Server -> run: node server.js
+4. connect to https://myserverip (with 2 tabs or browsers to hear yourself)
 
 #How to install the Server with docker
-go to: (comming soon)
+You have 2 options for using this app with docker
+##Use the container from Dockerhub
+`run -d -p 80:80 -p 443:443 rofl256/nodejsvoip"
 
-TODO: improve sound quallity by implemnting opus
+##Build your own image with the Dockerfile at the docker folder
+`sudo docker build -t nodejsvoip .`
+now run the container from the image you have just created. (use)
+
+#Roadmap
+* improve sound quallity by implementing opus
