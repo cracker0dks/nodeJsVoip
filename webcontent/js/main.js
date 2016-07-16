@@ -1,222 +1,147 @@
-var client = { //is observerd
-	"pp" : null, //Profil Pic
-	"nn" : "userXY", //Nickname
-	"mg" : 4/100, // minGain
-	"mic" : true,
-	"sound" : true
-}
-var settingsModalOpen = false;
-var clientMsgsForTimeout = [];
+var socket = io();
 
-if(typeof(localStorage) !== "undefined") {
-	var clientString = localStorage.getItem("client");
-	if(typeof(clientString)==="string") {
-		var newClientObject = JSON.parse(clientString);
-		for(var i in newClientObject) {
-			client[i] = newClientObject[i];
-		}
-	}
-}
+var soundcardSampleRate = null; //Sample rate from the soundcard (is set at mic access)
+var mySampleRate = 8000; //Samplerate outgoing audio
+var myBitRate = 8; //8,16,32 - outgoing bitrate
+var myMinGain = 4/100; //min Audiolvl
+var micEnabled = false;
 
-if(typeof(Object.observe)!=="undefined") {
-	Object.observe(client, function(changes) {
-		wsSendStrings(["client", changes[0].name, client[changes[0].name]]);
-		localStorage.setItem("client",JSON.stringify(client));
-		console.log(changes);
-	});
-} else if(typeof(client.watch)!=="undefined") { //Firefox (NO Observe)
-	client.watch("pp", function(id, oldval, newval) {
-		observeInfo(id, newval);
-	});
+var downSampleWorker = new Worker('./js/voipWorker.js');
+var upSampleWorker = new Worker('./js/voipWorker.js');
 
-	client.watch("nn", function(id, oldval, newval) {
-		observeInfo(id, newval);
-	});
+var socketConnected = false; //is true if client is connected
+var steamBuffer = {}; //Buffers incomeing audio
 
-	client.watch("mg", function(id, oldval, newval) {
-		observeInfo(id, newval);
-	});
-
-	function observeInfo(name, newValue) {
-		wsSendStrings(["client", name, newValue]);
-		localStorage.setItem("client",JSON.stringify(client));
-		console.log(name,newValue);
-	}
+function hasGetUserMedia() {
+  return !!(navigator.getUserMedia || navigator.webkitGetUserMedia ||
+            navigator.mozGetUserMedia || navigator.msGetUserMedia);
 }
 
-function writeToChat(clientName,text) {
-	clientName = clientName.replace(/<\/?[^>]+(>|$)/g, "");
-	text = text.replace(/<\/?[^>]+(>|$)/g, "");
-	text = text.linkify();
-	$("#chatContent").append('<div><b>'+clientName+': </b>'+text+'</div>');
-	var objDiv = document.getElementById("chatContent");
-	objDiv.scrollTop = objDiv.scrollHeight;
-}
-
-$(document).ready(function() {
-	$.material.init();
-
-	
-	/*---------------------------------------------------
-		--- Settings UI Functions ---
-	---------------------------------------------------*/
-	window.setInterval(function() {
-		for(var i in clientMsgsForTimeout) {
-			if((+new Date()-clientMsgsForTimeout[i])>50) {
-				$("#sp_cl"+i).addClass("label-primary");
-				$("#sp_cl"+i).removeClass("label-info");
-			}
-		}
-	},500);
-
-	$(".onlyIfMicInputIsOn").hide();
-
-	$("#toggleSound").click(function() {
-		client.sound = !client.sound;
-		checkMicAndSound();
+io.on('connection', function(socket){
+	console.log('socket connected!');
+	socketConnected = true;
+	socket.on('disconnect', function(){
+		console.log('socket disconnected!');
+		socketConnected = false;
 	});
 
-	$("#toggleMic").click(function() {
-		client.mic = !client.mic;
-		checkMicAndSound();
-	});
-
-	function checkMicAndSound() {
-		if(!client.sound){
-			$("#toggleSound").find("i").removeClass("mdi-av-volume-up");
-			$("#toggleSound").find("i").addClass("mdi-av-volume-off");
-		} else {
-			$("#toggleSound").find("i").addClass("mdi-av-volume-up");
-			$("#toggleSound").find("i").removeClass("mdi-av-volume-off");
-		}
-
-		if(!client.mic){
-			$("#toggleMic").find("i").removeClass("mdi-av-mic");
-			$("#toggleMic").find("i").addClass("mdi-av-mic-off");
-		} else {
-			$("#toggleMic").find("i").addClass("mdi-av-mic");
-			$("#toggleMic").find("i").removeClass("mdi-av-mic-off");
-		}
-	}
-	checkMicAndSound();
-	
-
-	function chatSend(text) {
-		text = $.trim(text);
-		if(text!=="") {
-			wsSendStrings(["chat",text]);
-			writeToChat(client.nn,text);
-			$("#chatInput").val("");
-		}
-	}
-
-	$("#chatSend").click(function() {
-		chatSend($("#chatInput").val());
-	});
-	$( "#chatInput" ).keyup(function( event ) {
-		if ( event.which == 13 ) {
-		    event.preventDefault();
-		    chatSend($("#chatInput").val());
+	socket.on('d', function(data){ 
+		if(micEnabled) {
+			upSampleWorker.postMessage({
+				"inc" : true,
+				"inDataArrayBuffer" : data["a"], //Audio data
+				"outSampleRate" : soundcardSampleRate,
+				"outChunkSize" : 2048,
+				"socketId" : data["sid"];
+			});
 		}
 	});
-
-	$("#nickname").val(client.nn);
-	if(client.pp != null)
-		$('#sProfilePic').attr( "src", client.pp );
-
-	$("#inputProfilePic").change(function(){
-	    readImage( this );
-	});
-
-	function readImage(input) {
-	    if ( input.files && input.files[0] ) {
-	    	if(input.files[0].type.indexOf("image")===-1) {
-	    		alert("Bitte ein Bild wählen!");
-	    	} else if(input.files[0].size>500000) {
-	    		alert("Bitte ein Bild kleiner 0.5MB wählen!");
-	    	} else {
-	    		var FR= new FileReader();
-		        FR.onload = function(e) {
-		        	client.pp = e.target.result;
-		             $('#sProfilePic').attr( "src", e.target.result );
-		        };       
-		        FR.readAsDataURL(input.files[0] );
-	    	}
-	    }
-	}
-
-	$("#nickname").focusout(function() {
-		var nick = $.trim($("#nickname").val());
-		if(nick !== "")
-			client.nn = nick;
-	});
-
-	$('.slider').noUiSlider({
-		start: [4],
-		range: {
-			'min': 0,
-			'max': 100
-		}
-	});
-
-	$(".slider").on({
-		set: function(){
-			myMinGain = Math.pow($(this).val()/100, 4);
-			client.mg = myMinGain;
-		}
-	});
-	
-
-	for(var i=0;i<commonBitRates.length;i++) {
-		if(commonBitRates[i] <= 16) {
-			var s = "";
-			if(commonBitRates[i] == myBitRate)
-				s='selected="selected"';
-			$("#bitrateSelect").append('<option '+s+' value="'+commonBitRates[i]+'">'+commonBitRates[i]+'</option>');
-		}
-	}
-	$("#bitrateSelect").change(function() {
-		myBitRate = parseInt($( "#bitrateSelect option:selected" ).val());
-	});
-
-	for(var i=0;i<commonSampleRates.length;i++) {
-		if(commonSampleRates[i] < 20000) {
-			var s = "";
-			if(commonSampleRates[i] == mySampleRate)
-				s='selected="selected"';
-			$("#sampleRateSelect").append('<option '+s+' value="'+commonSampleRates[i]+'">'+commonSampleRates[i]+'kHz</option>');
-		}
-	}
-	$("#sampleRateSelect").change(function() {
-		mySampleRate = parseInt($( "#sampleRateSelect option:selected" ).val());
-	});
-
-	$('#settingsModal').on('hidden.bs.modal', function (e) {
-	  	settingsModalOpen = false;
-	})
-
-	$('#settingsModal').on('shown.bs.modal', function (e) {
-	  	settingsModalOpen = true;
-	  	$("#minGainSlider").val(  Math.pow(client.mg, 1/4)*100 );
-	})
-
 });
 
-if(!String.linkify) {
-    String.prototype.linkify = function() {
+downSampleWorker.addEventListener('message', function(e) {
+	if(socketConnected) {
+		socket.emit("d", e.data);
+	}
+}, false);
 
-        // http://, https://, ftp://
-        var urlPattern = /\b(?:https?|ftp):\/\/[a-z0-9-+&@#\/%?=~_|!:,.;]*[a-z0-9-+&@#\/%=~_|]/gim;
+upSampleWorker.addEventListener('message', function(e) {
+	var data = e.data;
+	var clientId = data[0];
+	var voiceData = data[1];
+	clientMsgsForTimeout[clientId] = +new Date();
+	$("#sp_cl"+clientId).removeClass("label-primary");
+	$("#sp_cl"+clientId).addClass("label-info");
+	if(typeof(steamBuffer[clientId])==="undefined"){
+		steamBuffer[clientId] = [];
+	}
+	if(steamBuffer[clientId].length>5)
+		steamBuffer[clientId].splice(0,1);
+	steamBuffer[clientId].push(voiceData);
+	//console.log(steamBuffer);
+}, false);
 
-        // www. sans http:// or https://
-        var pseudoUrlPattern = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
 
-        // Email addresses
-        var emailAddressPattern = /[\w.]+@[a-zA-Z_-]+?(?:\.[a-zA-Z]{2,6})+/gim;
+if (hasGetUserMedia()) {
+	var context = new window.AudioContext || new window.webkitAudioContext;
+	soundcardSampleRate = context.sampleRate;
+	navigator.getUserMedia = ( navigator.getUserMedia ||
+                       navigator.webkitGetUserMedia ||
+                       navigator.mozGetUserMedia ||
+                       navigator.msGetUserMedia);
+	navigator.getUserMedia({audio: true}, function(stream){
+		var liveSource = context.createMediaStreamSource(stream);
+		// create a ScriptProcessorNode
+		if(!context.createScriptProcessor){
+			node = context.createJavaScriptNode(2048, 1, 1);
+		} else {
+			node = context.createScriptProcessor(2048, 1, 1);
+		}
 
-        return this
-            .replace(urlPattern, '<a target="#" href="$&">$&</a>')
-            .replace(pseudoUrlPattern, '$1<a target="#" href="http://$2">$2</a>')
-            .replace(emailAddressPattern, '<a target="#" href="mailto:$&">$&</a>');
-    };
+		node.onaudioprocess = function(e){
+			var inData = e.inputBuffer.getChannelData(0);
+			var outData = e.outputBuffer.getChannelData(0);
+
+			downSampleWorker.postMessage({
+				"inc" : false, //its audio from the client so false
+				"inDataArrayBuffer" : inData,
+				"inSampleRate" : soundcardSampleRate,
+				"outSampleRate" : mySampleRate,
+				"outBitRate" : myBitRate,
+				"minGain" : myMinGain
+			});
+
+			var allSilence = true;
+			for(var c in steamBuffer) {
+				if(steamBuffer[c].length!==0) {
+					allSilence = false;
+				}
+			}
+			if(allSilence) {
+				for(var i in inData) {
+					outData[i] = 0;
+				}
+			} else {
+				var div = false;
+				for(var c in steamBuffer) {
+					if(steamBuffer[c].length != 0) {
+						if(client.sound) {
+							for(var i in steamBuffer[c][0]) {
+								if(div)
+									outData[i] = (outData[i]+steamBuffer[c][0][i])/2;
+								else
+									outData[i] = steamBuffer[c][0][i];
+							}
+						}
+						steamBuffer[c].splice(0,1);
+						div = true;
+					}
+				}
+			}
+		}
+
+		//Lowpass
+  		biquadFilter = context.createBiquadFilter();
+  		biquadFilter.type = 0;
+  		biquadFilter.frequency.value = 3000;
+
+  		liveSource.connect(biquadFilter);
+
+  		//Dynamic Compression
+		dynCompressor = context.createDynamicsCompressor();
+		dynCompressor.threshold.value = -25;
+		dynCompressor.knee.value = 9;
+		dynCompressor.ratio.value = 8;
+		dynCompressor.reduction.value = -20;
+		dynCompressor.attack.value = 0.0;
+		dynCompressor.release.value = 0.25;
+
+		biquadFilter.connect(dynCompressor);
+		dynCompressor.connect(node);
+
+		node.connect(context.destination);
+	}, function(err) {
+		console.log(err);
+	});
+} else {
+	alert('getUserMedia() is not supported in your browser');
 }
