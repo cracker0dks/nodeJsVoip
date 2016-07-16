@@ -4,7 +4,7 @@ var ok=false;
 self.addEventListener('message', function(e) {
 
 	var data = e.data;
-	if(!ok) {
+	if(!ok) { //console log first audio packet
 		console.log(JSON.stringify(data));
 		ok = true;
 	}
@@ -64,7 +64,6 @@ self.addEventListener('message', function(e) {
 				} else if(outBitRate==16) {
 					bitratedData = mapFloat32ToUInt16Array(maxedData.ret);
 				}
-				bitratedData = addEcodingInformation(bitratedData, outSampleRate, outBitRate, maxedData.p); //Add encoding information
 
 				self.postMessage(bitratedData); //Send it back....
 			}
@@ -73,39 +72,6 @@ self.addEventListener('message', function(e) {
 
 	}
 }, false);
-
-/*---------------------------------------------------
-		--- Add and get encoding information from the data (so client know how to handle data) ---
----------------------------------------------------*/
-
-function addEcodingInformation(data, samplingRate, bitRate, p){
-	var buff = new ArrayBuffer(data.byteLength+3); //+x is the argument count
-	var newView = new Uint8Array(buff);
-	var oldView = new Uint8Array(data.buffer);
-	var i=0;
-	for(i = 0;i<oldView.length;i++){
-	    newView[i] = oldView[i];
-	}
-	newView[i++] = commonSampleRates.indexOf(samplingRate);
-	newView[i++] = bitRate;
-	newView[i++] = p;
-	return newView;
-}
-
-function getEncodingInformation(bitdata) {
-	var buff = new ArrayBuffer(bitdata.byteLength-4); //-x ist the argument count with clientId
-	var newView = new Uint8Array(buff);
-	var oldView = new Uint8Array(bitdata);
-	var i=0;
-	for(i=0;i<newView.length;i++) {
-		newView[i] = oldView[i];
-	}
-	var audioSamplingRate = oldView[i++];
-	var audioBitRate = oldView[i++];
-	var p = oldView[i++];
-	var clientId = oldView[i++]; //Information added on server
-	return [newView.buffer, commonSampleRates[audioSamplingRate], audioBitRate, p, clientId];
-}
 
 /*---------------------------------------------------
 		--- Dont send data if there is only silence ---
