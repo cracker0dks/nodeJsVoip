@@ -13,7 +13,7 @@ An simple nodeJs Websocket VOIP application without the use of WebRTC and extra 
 #How to install the Server with docker
 You have 2 options for using this app with docker
 ##Use the container from Dockerhub
-`run -d -p 80:80 -p 443:443 rofl256/nodejsvoip`
+`docker run -d -p 80:80 -p 443:443 rofl256/nodejsvoip`
 
 ##Build your own image with the Dockerfile at the docker folder
 `sudo docker build -t nodejsvoip .`
