@@ -51,16 +51,14 @@ self.addEventListener('message', function(e) {
 		resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function(resapledData) {
 			
 			var bitratedData = null;
-			if(minGain != null)
-				resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
+			// if(minGain != null)
+			// 	resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
 
 			if(resapledData != null) {
-				var maxedData = {}; //maxSignal(resapledData);
-				maxedData.ret = resapledData;
 				if(outBitRate==8) {
-					bitratedData = mapFloat32ToUInt8Array(maxedData.ret);
+					bitratedData = mapFloat32ToUInt8Array(resapledData);
 				} else if(outBitRate==16) {
-					bitratedData = mapFloat32ToUInt16Array(maxedData.ret);
+					bitratedData = mapFloat32ToUInt16Array(resapledData);
 				}
 
 				self.postMessage(bitratedData); //Send it back....
