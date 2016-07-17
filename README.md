@@ -10,6 +10,11 @@ An simple nodeJs Websocket VOIP application without the use of WebRTC and extra 
 4. start the Server -> run: `node server.js`
 5. connect to https://myserverip (with 2 tabs or browsers to hear yourself)
 
+##Supported (tested) browsers
+* Chrome
+* Firefox
+* Edge
+
 #How to install the Server with docker
 You have 2 options for using this app with docker
 ##Use the container from Dockerhub

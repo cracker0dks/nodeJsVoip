@@ -51,8 +51,8 @@ self.addEventListener('message', function(e) {
 		resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function(resapledData) {
 			
 			var bitratedData = null;
-			// if(minGain != null)
-			// 	resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
+			if(minGain != null)
+				resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
 
 			if(resapledData != null) {
 				if(outBitRate==8) {
