@@ -14,6 +14,7 @@ self.addEventListener('message', function(e) {
 	var outChunkSize = data.outChunkSize;
 	var minGain = data.minGain;
   var clientId = data.socketId;
+  var p = data.p;
 
 	if(inc) { //Data are from an other client
 		//inDataArrayBuffer = new ArrayBuffer(inDataArrayBuffer);
@@ -40,7 +41,7 @@ self.addEventListener('message', function(e) {
 				} else if(inBitrate==16) {
 					resapledData = mapUint16ToFloat32Array(resapledData);
 				}
-				var lowDat = resapledData; //lowSignal(resapledData, p);
+				var lowDat = lowSignal(resapledData, p);
 				self.postMessage([clientId,lowDat]); //Send data back....
 			});
 		} else {
@@ -54,6 +55,10 @@ self.addEventListener('message', function(e) {
 			if(minGain != null)
 				resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
 
+      var maxData = maxSignal(resapledData);
+      resapledData = maxData["ret"];
+      var p = maxData["p"];
+
 			if(resapledData != null) {
 				if(outBitRate==8) {
 					bitratedData = mapFloat32ToUInt8Array(resapledData);
@@ -61,7 +66,7 @@ self.addEventListener('message', function(e) {
 					bitratedData = mapFloat32ToUInt16Array(resapledData);
 				}
 
-				self.postMessage(bitratedData); //Send it back....
+				self.postMessage([bitratedData, p]); //Send it back....
 			}
 			
 		});
@@ -101,7 +106,7 @@ function gainGuard(data, minGain) {
 }
 
 /*---------------------------------------------------
-		--- CHANGE SAMPLERATE FUNCTIONS --- (No interpolation between samples yet)
+		--- CHANGE SAMPLERATE FUNCTIONS --- (with simple interpolation)
 ---------------------------------------------------*/
 function resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, doneCallback) {
 	if(inSampleRate > outSampleRate) {

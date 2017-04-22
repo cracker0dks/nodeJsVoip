@@ -22,7 +22,7 @@ You have 2 options for using this app with docker
 
 Now connect to https://myserverip
 
-## Build your own image with the Dockerfile at the docker folder
+## Build your own image
 `sudo docker build -t nodejsvoip .`
 now run the container from the image you have just created. (use the command from above and change the image name)
 

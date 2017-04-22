@@ -34,7 +34,8 @@ socketIO.on('connect', function(socket){
 				"outChunkSize" : chunkSize,
 				"socketId" : data["sid"],
 				"inSampleRate" : data["s"],
-				"inBitRate" : data["b"]
+				"inBitRate" : data["b"],
+				"p" : data["p"]
 			});
 		}
 	});
@@ -51,11 +52,13 @@ socketIO.on('disconnect', function(){
 
 downSampleWorker.addEventListener('message', function(e) {
 	if(socketConnected) {
-		var audioData = onMicCompressedAudio(e.data.buffer, mySampleRate, myBitRate)
+		var data = e.data;
+		var audioData = onMicCompressedAudio(data[0].buffer, mySampleRate, myBitRate)
 		socketIO.emit("d", 
 		{ "a" : audioData, //Audio data
 		  "s" : mySampleRate,
-		  "b" : myBitRate	
+		  "b" : myBitRate,
+		  "p" : data[1]
 		});
 	}
 }, false);
