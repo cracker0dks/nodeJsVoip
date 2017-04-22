@@ -28,3 +28,7 @@ now run the container from the image you have just created. (use the command fro
 
 # Roadmap
 * improve sound quallity by implementing opus
+
+# Audiopipeline Details
+
+![alt tag](https://raw.githubusercontent.com/cracker0dks/nodeJsVoip/master/doc/audioPipeline.png)
