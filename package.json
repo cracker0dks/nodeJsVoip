@@ -22,7 +22,7 @@
   "homepage": "https://github.com/cracker0dks/nodeJsVoip#readme",
   "dependencies": {
     "express": "4.x",
-    "socket.io": "1.x"
+    "socket.io": "^2.3.0"
   },
   "preferGlobal": true,
   "private": true

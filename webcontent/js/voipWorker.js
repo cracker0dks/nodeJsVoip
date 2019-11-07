@@ -1,32 +1,32 @@
 /* This is the VOIP Worker */
 // JOB: transcoding audio
 
-var ok=false;
-self.addEventListener('message', function(e) {
+var ok = false;
+self.addEventListener('message', function (e) {
 
-	var data = e.data;
-	var inc = data.inc; //true = data is from the server | false = data comeing from client mic
-	var inDataArrayBuffer = data.inDataArrayBuffer; //Incoming Data
-	var inSampleRate = data.inSampleRate;
-	var outSampleRate = data.outSampleRate;
-	var inBitrate = data.inBitRate;
-	var outBitRate = data.outBitRate;
-	var outChunkSize = data.outChunkSize;
-	var minGain = data.minGain;
+  var data = e.data;
+  var inc = data.inc; //true = data is from the server | false = data comeing from client mic
+  var inDataArrayBuffer = data.inDataArrayBuffer; //Incoming Data
+  var inSampleRate = data.inSampleRate;
+  var outSampleRate = data.outSampleRate;
+  var inBitrate = data.inBitRate;
+  var outBitRate = data.outBitRate;
+  var outChunkSize = data.outChunkSize;
+  var minGain = data.minGain;
   var clientId = data.socketId;
   var p = data.p;
 
-	if(inc) { //Data are from an other client
-		//inDataArrayBuffer = new ArrayBuffer(inDataArrayBuffer);
-		if(inBitrate==8) {
-			inDataArrayBuffer = new Uint8Array(inDataArrayBuffer);
-		} else if(inBitrate==16) {
-			inDataArrayBuffer = new Uint16Array(inDataArrayBuffer);
-		} else if(inBitrate==32) {
-			inDataArrayBuffer = new Float32Array(inDataArrayBuffer); 
-		} else {
-			inDataArrayBuffer = null;
-		}
+  if (inc) { //Data are from an other client
+    //inDataArrayBuffer = new ArrayBuffer(inDataArrayBuffer);
+    if (inBitrate == 8) {
+      inDataArrayBuffer = new Uint8Array(inDataArrayBuffer);
+    } else if (inBitrate == 16) {
+      inDataArrayBuffer = new Uint16Array(inDataArrayBuffer);
+    } else if (inBitrate == 32) {
+      inDataArrayBuffer = new Float32Array(inDataArrayBuffer);
+    } else {
+      inDataArrayBuffer = null;
+    }
 
     // if(!ok) { //console log first inc data packet
     //   console.log(inDataArrayBuffer);
@@ -34,44 +34,44 @@ self.addEventListener('message', function(e) {
     //   ok = true;
     // }
 
-		if(inDataArrayBuffer!=null) {
-			resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function(resapledData) {
-				if(inBitrate==8) {
-					resapledData = mapUint8ToFloat32Array(resapledData);
-				} else if(inBitrate==16) {
-					resapledData = mapUint16ToFloat32Array(resapledData);
-				}
-				var lowDat = lowSignal(resapledData, p);
-				self.postMessage([clientId,lowDat]); //Send data back....
-			});
-		} else {
-			console.log("Not supported bitrate from a client!");
-		}		
+    if (inDataArrayBuffer != null) {
+      resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function (resapledData) {
+        if (inBitrate == 8) {
+          resapledData = mapUint8ToFloat32Array(resapledData);
+        } else if (inBitrate == 16) {
+          resapledData = mapUint16ToFloat32Array(resapledData);
+        }
+        var lowDat = lowSignal(resapledData, p);
+        self.postMessage([clientId, lowDat]); //Send data back....
+      });
+    } else {
+      console.log("Not supported bitrate from a client!");
+    }
 
-	} else { //Data from the client itself (Add encoding information before send it to the server)
-		resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function(resapledData) {
-			
-			var bitratedData = null;
-			if(minGain != null)
-				resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
+  } else { //Data from the client itself (Add encoding information before send it to the server)
+    resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function (resapledData) {
+
+      var bitratedData = null;
+      if (minGain != null)
+        resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
 
       var maxData = maxSignal(resapledData);
-      resapledData = maxData["ret"];
-      var p = maxData["p"];
+      resapledData = maxData ? maxData["ret"] : [];
+      var p = maxData ? maxData["p"] : 0;
 
-			if(resapledData != null) {
-				if(outBitRate==8) {
-					bitratedData = mapFloat32ToUInt8Array(resapledData);
-				} else if(outBitRate==16) {
-					bitratedData = mapFloat32ToUInt16Array(resapledData);
-				}
+      if (resapledData != null) {
+        if (outBitRate == 8) {
+          bitratedData = mapFloat32ToUInt8Array(resapledData);
+        } else if (outBitRate == 16) {
+          bitratedData = mapFloat32ToUInt16Array(resapledData);
+        }
 
-				self.postMessage([bitratedData, p]); //Send it back....
-			}
-			
-		});
+        self.postMessage([bitratedData, p]); //Send it back....
+      }
 
-	}
+    });
+
+  }
 }, false);
 
 /*---------------------------------------------------
@@ -81,66 +81,65 @@ self.addEventListener('message', function(e) {
 var currntPass = 0;
 //Trim the audio singal if under a given value
 function gainGuard(data, minGain) {
-	var vaildData = false;
-	for(var i=0;i<data.length; i++) {
-		if(Math.abs(data[i]) < minGain) {
-			if(currntPass == 0) {
-				data[i] = 0;
-			}
-			else {
-				vaildData = true;
-				currntPass--;
-			} 	
-		}
-		else {
-			vaildData = true;
-			currntPass = 4000; //let 4000 samples pass after the last sample under minGain
-		}
-	}
-	if(vaildData)
-		return data;
-	else {
-		resapelBuffer = []; //Remove old audio from buffer because there should not be a silence at the begin of the next voice
-		return null;
-	}
+  var vaildData = false;
+  for (var i = 0; i < data.length; i++) {
+    if (Math.abs(data[i]) < minGain) {
+      if (currntPass == 0) {
+        data[i] = 0;
+      }
+      else {
+        vaildData = true;
+        currntPass--;
+      }
+    }
+    else {
+      vaildData = true;
+      currntPass = 4000; //let 4000 samples pass after the last sample under minGain
+    }
+  }
+  if (vaildData)
+    return data;
+  else {
+    resapelBuffer = []; //Remove old audio from buffer because there should not be a silence at the begin of the next voice
+    return null;
+  }
 }
 
 /*---------------------------------------------------
 		--- CHANGE SAMPLERATE FUNCTIONS --- (with simple interpolation)
 ---------------------------------------------------*/
 function resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, doneCallback) {
-	if(inSampleRate > outSampleRate) {
-		doneCallback(downSample(inSampleRate, outSampleRate, inDataArrayBuffer));
-	} else {
-		upSample(inSampleRate, outSampleRate, outChunkSize, inDataArrayBuffer, doneCallback);
-	}
+  if (inSampleRate > outSampleRate) {
+    doneCallback(downSample(inSampleRate, outSampleRate, inDataArrayBuffer));
+  } else {
+    upSample(inSampleRate, outSampleRate, outChunkSize, inDataArrayBuffer, doneCallback);
+  }
 }
 
 function downSample(fromSampleRate, toSampleRate, buffer) {
-	var outLength = buffer.length/(fromSampleRate / toSampleRate);
-	var outBuffer = [];
-	var s = Smooth(buffer,{scaleTo:outLength, method: 'cubic', clip:"clamp"});
-	
-	for(var i=0;i<outLength;i++) {
-		outBuffer.push(s(i));
-	}
+  var outLength = buffer.length / (fromSampleRate / toSampleRate);
+  var outBuffer = [];
+  var s = Smooth(buffer, { scaleTo: outLength, method: 'cubic', clip: "clamp" });
 
-	return outBuffer;
+  for (var i = 0; i < outLength; i++) {
+    outBuffer.push(s(i));
+  }
+
+  return outBuffer;
 }
 
 var sampleBuffer = [];
 function upSample(fromSampleRate, toSampleRate, chunkSize, buffer, callBack) {
-	var outLength = buffer.length/(fromSampleRate / toSampleRate);
-	var outBuffer = [];
-	var s = Smooth(buffer,{scaleTo:outLength, method: 'cubic', clip:"clamp"});
+  var outLength = buffer.length / (fromSampleRate / toSampleRate);
+  var s = buffer.length > 0 ? Smooth(buffer, { scaleTo: outLength, method: 'cubic', clip: "clamp" }) : [];
 
-	for(var i=0;i<outLength;i++) {
-		sampleBuffer.push(s(i));
-		if(sampleBuffer.length>=chunkSize) {
-			callBack(sampleBuffer);
-			sampleBuffer = [];
-		}
-	}
+  for (var i = 0; i < outLength; i++) {
+    sampleBuffer.push(s(i));
+    if (sampleBuffer.length >= chunkSize) {
+      callBack(sampleBuffer);
+      sampleBuffer = [];
+    }
+  }
 
 }
 
@@ -149,32 +148,34 @@ function upSample(fromSampleRate, toSampleRate, chunkSize, buffer, callBack) {
 ---------------------------------------------------*/
 
 function maxSignal(buffer) {
-	var max = 0;
-	for(var i=0;i<buffer.length;i++) {
-		if(max<Math.abs(buffer[i]))
-			max = Math.abs(buffer[i]);
-	}
-	if(max===0)
-		return buffer;
+  var max = 0;
+  if (buffer) {
+    for (var i = 0; i < buffer.length; i++) {
+      if (max < Math.abs(buffer[i]))
+        max = Math.abs(buffer[i]);
+    }
+  }
+  if (max === 0)
+    return buffer;
 
-	var p = (1 / max);
-	p=Math.floor(p*100)/100;
-	if(p>2.55)
-		p = 2.55;
+  var p = (1 / max);
+  p = Math.floor(p * 100) / 100;
+  if (p > 2.55)
+    p = 2.55;
 
-	var ret = [];
-	for(var i=0;i<buffer.length;i++) {
-		ret.push(buffer[i]*p);
-	}
-	return { "ret" : ret, "p" : p };
+  var ret = [];
+  for (var i = 0; i < buffer.length; i++) {
+    ret.push(buffer[i] * p);
+  }
+  return { "ret": ret, "p": p };
 }
 
 function lowSignal(buffer, p) {
-	var ret = [];
-	for(var i=0;i<buffer.length;i++) {
-		ret.push(buffer[i]/p);
-	}
-	return ret;
+  var ret = [];
+  for (var i = 0; i < buffer.length; i++) {
+    ret.push(buffer[i] / p);
+  }
+  return ret;
 }
 
 /*---------------------------------------------------
@@ -183,38 +184,38 @@ function lowSignal(buffer, p) {
 
 //Put flt32Array in get Uint16Array Out
 function mapFloat32ToUInt16Array(flt32) {
-	var uint16Array = new Uint16Array(flt32.length);
-	for(var i=0; i< flt32.length; i++) {
-		uint16Array[i] = (flt32[i]+1)*32767.5;
-	}
-	return uint16Array;
+  var uint16Array = new Uint16Array(flt32.length);
+  for (var i = 0; i < flt32.length; i++) {
+    uint16Array[i] = (flt32[i] + 1) * 32767.5;
+  }
+  return uint16Array;
 }
 
 //Put Uint16Array in get flt32Array Out
 function mapUint16ToFloat32Array(uin16) {
-	var flt32Array = new Float32Array(uin16.length);
-	for(var i=0; i< uin16.length; i++) {
-		flt32Array[i] = uin16[i]*0.000030518043793392844-1;
-	}
-	return flt32Array;
+  var flt32Array = new Float32Array(uin16.length);
+  for (var i = 0; i < uin16.length; i++) {
+    flt32Array[i] = uin16[i] * 0.000030518043793392844 - 1;
+  }
+  return flt32Array;
 }
 
 //Put Uint8Array in get flt32Array Out
 function mapUint8ToFloat32Array(uin8) {
-	var flt32Array = new Float32Array(uin8.length);
-	for(var i=0; i< uin8.length; i++) {
-		flt32Array[i] = uin8[i]*0.00784313725490196-1; // 0.00784313725490196 = 2/255
-	}
-	return flt32Array;
+  var flt32Array = new Float32Array(uin8.length);
+  for (var i = 0; i < uin8.length; i++) {
+    flt32Array[i] = uin8[i] * 0.00784313725490196 - 1; // 0.00784313725490196 = 2/255
+  }
+  return flt32Array;
 }
 
 //Put flt32Array in get Uint8Array Out
 function mapFloat32ToUInt8Array(flt32) {
-	var uint8Array = new Uint8Array(flt32.length);
-	for(var i=0; i< flt32.length; i++) {
-		uint8Array[i] = (flt32[i]+1)*127.5;
-	}
-	return uint8Array;
+  var uint8Array = new Uint8Array(flt32.length);
+  for (var i = 0; i < flt32.length; i++) {
+    uint8Array[i] = (flt32[i] + 1) * 127.5;
+  }
+  return uint8Array;
 }
 
 //-------------------------------
@@ -233,10 +234,10 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
 /*Constants (these are accessible by Smooth.WHATEVER in user space)
 */
 
-(function() {
+(function () {
   var AbstractInterpolator, CubicInterpolator, Enum, LinearInterpolator, NearestInterpolator, PI, SincFilterInterpolator, Smooth, clipClamp, clipMirror, clipPeriodic, defaultConfig, getColumn, getType, isValidNumber, k, makeLanczosWindow, makeScaledFunction, makeSincKernel, normalizeScaleTo, shallowCopy, sin, sinc, v, validateNumber, validateVector,
     __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+    __extends = function (child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   Enum = {
     /*Interpolation methods
@@ -270,17 +271,17 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
   /*Index clipping functions
   */
 
-  clipClamp = function(i, n) {
+  clipClamp = function (i, n) {
     return Math.max(0, Math.min(i, n - 1));
   };
 
-  clipPeriodic = function(i, n) {
+  clipPeriodic = function (i, n) {
     i = i % n;
     if (i < 0) i += n;
     return i;
   };
 
-  clipMirror = function(i, n) {
+  clipMirror = function (i, n) {
     var period;
     period = 2 * (n - 1);
     i = clipPeriodic(i, period);
@@ -294,10 +295,10 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
   Subclasses must override interpolate().
   */
 
-  AbstractInterpolator = (function() {
+  AbstractInterpolator = (function () {
 
     function AbstractInterpolator(array, config) {
-      if(typeof(array.slice)==="undefined")
+      if (typeof (array.slice) === "undefined")
         this.array = array.subarray(0);
       else
         this.array = array.slice(0);
@@ -312,7 +313,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
       }
     }
 
-    AbstractInterpolator.prototype.getClippedInput = function(i) {
+    AbstractInterpolator.prototype.getClippedInput = function (i) {
       if ((0 <= i && i < this.length)) {
         return this.array[i];
       } else {
@@ -320,23 +321,23 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
       }
     };
 
-    AbstractInterpolator.prototype.clipHelperClamp = function(i) {
+    AbstractInterpolator.prototype.clipHelperClamp = function (i) {
       return this.array[clipClamp(i, this.length)];
     };
 
-    AbstractInterpolator.prototype.clipHelperZero = function(i) {
+    AbstractInterpolator.prototype.clipHelperZero = function (i) {
       return 0;
     };
 
-    AbstractInterpolator.prototype.clipHelperPeriodic = function(i) {
+    AbstractInterpolator.prototype.clipHelperPeriodic = function (i) {
       return this.array[clipPeriodic(i, this.length)];
     };
 
-    AbstractInterpolator.prototype.clipHelperMirror = function(i) {
+    AbstractInterpolator.prototype.clipHelperMirror = function (i) {
       return this.array[clipMirror(i, this.length)];
     };
 
-    AbstractInterpolator.prototype.interpolate = function(t) {
+    AbstractInterpolator.prototype.interpolate = function (t) {
       throw 'Subclasses of AbstractInterpolator must override the interpolate() method.';
     };
 
@@ -344,7 +345,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
 
   })();
 
-  NearestInterpolator = (function(_super) {
+  NearestInterpolator = (function (_super) {
 
     __extends(NearestInterpolator, _super);
 
@@ -352,7 +353,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
       NearestInterpolator.__super__.constructor.apply(this, arguments);
     }
 
-    NearestInterpolator.prototype.interpolate = function(t) {
+    NearestInterpolator.prototype.interpolate = function (t) {
       return this.getClippedInput(Math.round(t));
     };
 
@@ -360,7 +361,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
 
   })(AbstractInterpolator);
 
-  LinearInterpolator = (function(_super) {
+  LinearInterpolator = (function (_super) {
 
     __extends(LinearInterpolator, _super);
 
@@ -368,7 +369,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
       LinearInterpolator.__super__.constructor.apply(this, arguments);
     }
 
-    LinearInterpolator.prototype.interpolate = function(t) {
+    LinearInterpolator.prototype.interpolate = function (t) {
       var k;
       k = Math.floor(t);
       t -= k;
@@ -379,7 +380,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
 
   })(AbstractInterpolator);
 
-  CubicInterpolator = (function(_super) {
+  CubicInterpolator = (function (_super) {
 
     __extends(CubicInterpolator, _super);
 
@@ -388,11 +389,11 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
       CubicInterpolator.__super__.constructor.apply(this, arguments);
     }
 
-    CubicInterpolator.prototype.getTangent = function(k) {
+    CubicInterpolator.prototype.getTangent = function (k) {
       return this.tangentFactor * (this.getClippedInput(k + 1) - this.getClippedInput(k - 1)) / 2;
     };
 
-    CubicInterpolator.prototype.interpolate = function(t) {
+    CubicInterpolator.prototype.interpolate = function (t) {
       var k, m, p, t2, t3;
       k = Math.floor(t);
       m = [this.getTangent(k), this.getTangent(k + 1)];
@@ -409,7 +410,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
 
   sin = Math.sin, PI = Math.PI;
 
-  sinc = function(x) {
+  sinc = function (x) {
     if (x === 0) {
       return 1;
     } else {
@@ -417,19 +418,19 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
     }
   };
 
-  makeLanczosWindow = function(a) {
-    return function(x) {
+  makeLanczosWindow = function (a) {
+    return function (x) {
       return sinc(x / a);
     };
   };
 
-  makeSincKernel = function(window) {
-    return function(x) {
+  makeSincKernel = function (window) {
+    return function (x) {
       return sinc(x) * window(x);
     };
   };
 
-  SincFilterInterpolator = (function(_super) {
+  SincFilterInterpolator = (function (_super) {
 
     __extends(SincFilterInterpolator, _super);
 
@@ -440,7 +441,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
       this.kernel = makeSincKernel(config.sincWindow);
     }
 
-    SincFilterInterpolator.prototype.interpolate = function(t) {
+    SincFilterInterpolator.prototype.interpolate = function (t) {
       var k, n, sum, _ref, _ref2;
       k = Math.floor(t);
       sum = 0;
@@ -454,7 +455,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
 
   })(AbstractInterpolator);
 
-  getColumn = function(arr, i) {
+  getColumn = function (arr, i) {
     var row, _i, _len, _results;
     _results = [];
     for (_i = 0, _len = arr.length; _i < _len; _i++) {
@@ -464,30 +465,30 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
     return _results;
   };
 
-  makeScaledFunction = function(f, baseScale, scaleRange) {
+  makeScaledFunction = function (f, baseScale, scaleRange) {
     var scaleFactor, translation;
     if (scaleRange.join === '0,1') {
       return f;
     } else {
       scaleFactor = baseScale / (scaleRange[1] - scaleRange[0]);
       translation = scaleRange[0];
-      return function(t) {
+      return function (t) {
         return f(scaleFactor * (t - translation));
       };
     }
   };
 
-  getType = function(x) {
+  getType = function (x) {
     return Object.prototype.toString.call(x).slice('[object '.length, -1);
   };
 
-  validateNumber = function(n) {
+  validateNumber = function (n) {
     if (isNaN(n)) throw 'NaN in Smooth() input';
     if (getType(n) !== 'Number') throw 'Non-number in Smooth() input';
     if (!isFinite(n)) throw 'Infinity in Smooth() input';
   };
 
-  validateVector = function(v, dimension) {
+  validateVector = function (v, dimension) {
     var n, _i, _len;
     if (getType(v) !== 'Array') throw 'Non-vector in Smooth() input';
     if (v.length !== dimension) throw 'Inconsistent dimension in Smooth() input';
@@ -497,11 +498,11 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
     }
   };
 
-  isValidNumber = function(n) {
+  isValidNumber = function (n) {
     return (getType(n) === 'Number') && isFinite(n) && !isNaN(n);
   };
 
-  normalizeScaleTo = function(s) {
+  normalizeScaleTo = function (s) {
     var invalidErr;
     invalidErr = "scaleTo param must be number or array of two numbers";
     switch (getType(s)) {
@@ -519,7 +520,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
     return s;
   };
 
-  shallowCopy = function(obj) {
+  shallowCopy = function (obj) {
     var copy, k, v;
     copy = {};
     for (k in obj) {
@@ -530,7 +531,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
     return copy;
   };
 
-  Smooth = function(arr, config) {
+  Smooth = function (arr, config) {
     var baseDomainEnd, dimension, i, interpolator, interpolatorClass, interpolators, k, n, properties, smoothFunc, v;
     if (config == null) config = {};
     properties = {};
@@ -559,7 +560,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
     }
     if (arr.length < 2) throw 'Array must have at least two elements';
     properties.count = arr.length;
-    smoothFunc = (function() {
+    smoothFunc = (function () {
       var _i, _j, _len, _len2;
       switch (getType(arr[0])) {
         case 'Number':
@@ -571,7 +572,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
             }
           }
           interpolator = new interpolatorClass(arr, config);
-          return function(t) {
+          return function (t) {
             return interpolator.interpolate(t);
           };
         case 'Array':
@@ -583,7 +584,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
               validateVector(v, dimension);
             }
           }
-          interpolators = (function() {
+          interpolators = (function () {
             var _results;
             _results = [];
             for (i = 0; 0 <= dimension ? i < dimension : i > dimension; 0 <= dimension ? i++ : i--) {
@@ -591,7 +592,7 @@ Licensed under MIT license (see "Smooth.js MIT license.txt")
             }
             return _results;
           })();
-          return function(t) {
+          return function (t) {
             var interpolator, _k, _len3, _results;
             _results = [];
             for (_k = 0, _len3 = interpolators.length; _k < _len3; _k++) {
