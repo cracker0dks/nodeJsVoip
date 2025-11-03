@@ -1,2 +1,13 @@
 /node_modules
 /package-lock.json
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

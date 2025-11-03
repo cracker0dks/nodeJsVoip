@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  nodejsvoip:
+    build: .
+    container_name: nodejsvoip
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:${HTTP_PORT:-80}"
+      - "${SSL_PORT:-443}:${SSL_PORT:-443}"
+    environment:
+      # Server ports
+      - SSL_PORT=${SSL_PORT:-443}
+      - HTTP_PORT=${HTTP_PORT:-80}
+
+      # SSL certificate paths (inside container)
+      - PRIVATE_KEY_PATH=${PRIVATE_KEY_PATH:-./cert/key.pem}
+      - CERTIFICATE_PATH=${CERTIFICATE_PATH:-./cert/cert.pem}
+
+      # Node environment
+      - NODE_ENV=${NODE_ENV:-production}
+
+      # Socket.IO configuration
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - PING_TIMEOUT=${PING_TIMEOUT:-60000}
+      - PING_INTERVAL=${PING_INTERVAL:-25000}
+
+      # Debug mode
+      - DEBUG=${DEBUG:-false}
+
+    volumes:
+      # Mount SSL certificates from host
+      - ./cert:/opt/app/cert:ro
+
+      # Optional: Mount .env file if you want to use it
+      # - ./.env:/opt/app/.env:ro
+
+    networks:
+      - voip-network
+
+networks:
+  voip-network:
+    driver: bridge

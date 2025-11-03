@@ -15,6 +15,8 @@ self.addEventListener('message', function (e) {
   var minGain = data.minGain;
   var clientId = data.socketId;
   var p = data.p;
+  var vadConfig = data.vadConfig;
+  var noiseConfig = data.noiseConfig;
 
   if (inc) { //Data are from an other client
     //inDataArrayBuffer = new ArrayBuffer(inDataArrayBuffer);
@@ -52,8 +54,19 @@ self.addEventListener('message', function (e) {
     resample(inDataArrayBuffer, inSampleRate, outSampleRate, outChunkSize, function (resapledData) {
 
       var bitratedData = null;
-      if (minGain != null)
-        resapledData = gainGuard(resapledData, minGain); //Set resapledData to null if voice is to low
+
+      // Apply noise suppression if enabled
+      if (noiseConfig && noiseConfig.enabled) {
+        resapledData = noiseSuppress(resapledData, noiseConfig);
+      }
+
+      // Apply VAD if enabled
+      if (vadConfig && vadConfig.enabled) {
+        resapledData = voiceActivityDetection(resapledData, vadConfig);
+      } else if (minGain != null) {
+        // Fallback to original gain guard
+        resapledData = gainGuard(resapledData, minGain);
+      }
 
       var maxData = maxSignal(resapledData);
       resapledData = maxData ? maxData["ret"] : [];
@@ -103,6 +116,86 @@ function gainGuard(data, minGain) {
     resapelBuffer = []; //Remove old audio from buffer because there should not be a silence at the begin of the next voice
     return null;
   }
+}
+
+/*---------------------------------------------------
+		--- VOICE ACTIVITY DETECTION (VAD) ---
+---------------------------------------------------*/
+
+var silentFrameCount = 0;
+
+function voiceActivityDetection(data, vadConfig) {
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Calculate energy (RMS - Root Mean Square)
+  var sumSquares = 0;
+  for (var i = 0; i < data.length; i++) {
+    sumSquares += data[i] * data[i];
+  }
+  var rms = Math.sqrt(sumSquares / data.length);
+
+  // Calculate zero crossing rate (frequency content indicator)
+  var zeroCrossings = 0;
+  for (var i = 1; i < data.length; i++) {
+    if ((data[i - 1] >= 0 && data[i] < 0) || (data[i - 1] < 0 && data[i] >= 0)) {
+      zeroCrossings++;
+    }
+  }
+  var zeroCrossingRate = (zeroCrossings / data.length) * 1000; // Normalized
+
+  // Voice activity detected if energy is above threshold and frequency content is appropriate
+  var isVoice = (rms > vadConfig.energyThreshold) && (zeroCrossingRate > vadConfig.frequencyThreshold);
+
+  if (isVoice) {
+    silentFrameCount = 0;
+    return data;
+  } else {
+    silentFrameCount++;
+
+    // If we've been silent for too long, send silence (null)
+    if (silentFrameCount > vadConfig.silentFrameThreshold) {
+      resapelBuffer = []; // Clear buffer to avoid silence at start of next voice
+      return null;
+    } else {
+      // Keep sending data for a few frames after voice stops (hangover)
+      return data;
+    }
+  }
+}
+
+/*---------------------------------------------------
+		--- NOISE SUPPRESSION ---
+---------------------------------------------------*/
+
+var previousSample = 0;
+
+function noiseSuppress(data, noiseConfig) {
+  if (!data || data.length === 0) {
+    return data;
+  }
+
+  var threshold = noiseConfig.noiseGateThreshold;
+  var smoothing = noiseConfig.smoothingFactor;
+  var output = [];
+
+  for (var i = 0; i < data.length; i++) {
+    var sample = data[i];
+    var absample = Math.abs(sample);
+
+    // Noise gate: suppress signals below threshold
+    if (absample < threshold) {
+      // Apply smoothing to avoid abrupt cutoff
+      sample = sample * smoothing + previousSample * (1 - smoothing);
+      sample = sample * 0.5; // Reduce by 50%
+    }
+
+    output.push(sample);
+    previousSample = sample;
+  }
+
+  return output;
 }
 
 /*---------------------------------------------------

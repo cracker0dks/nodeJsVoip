@@ -4,7 +4,7 @@
 <head>
 	<meta charset='utf-8'>
 	<title>NodeVoip</title>
-	<script type="text/javascript" src="./js/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="./js/config.js"></script>
 	<script type="text/javascript" src="./js/socket.io.js"></script>
 	<script type="text/javascript" src="./js/voip.js"></script>
 	<script type="text/javascript" src="./js/main.js"></script>
@@ -13,9 +13,86 @@
 </head>
 
 <body>
-	<h1>NodeJsVoip</h1>
-	<button id="startBtn">Start Talking</button>
-	connected clients: <span id="clients"></span><br><br>
+	<h1>NodeJsVoip
+		<span id="connectionStatus" style="font-size: 14px; margin-left: 15px; padding: 5px 10px; border-radius: 3px; background: #6c757d; color: white;">
+			● Connecting...
+		</span>
+	</h1>
+
+	<!-- Room Selection Panel -->
+	<div style="margin: 20px 0; padding: 15px; background: #e8f4f8; border-radius: 5px; border: 2px solid #4a90e2;">
+		<h3 style="margin-top: 0;">🏠 Room/Channel Selection</h3>
+
+		<div style="margin-bottom: 15px;">
+			<label for="roomName" style="font-weight: bold;">Room Name:</label>
+			<input type="text" id="roomName" placeholder="Enter room name (e.g., lobby)"
+				style="padding: 5px 10px; margin: 0 10px; border: 1px solid #ccc; border-radius: 3px; width: 200px;">
+			<button id="joinRoomBtn" style="padding: 5px 15px; background: #4a90e2; color: white; border: none; border-radius: 3px; cursor: pointer;">
+				Join Room
+			</button>
+			<button id="leaveRoomBtn" style="padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; display: none;">
+				Leave Room
+			</button>
+		</div>
+
+		<div id="currentRoomInfo" style="display: none; padding: 10px; background: #d4edda; border-radius: 3px; margin-bottom: 10px;">
+			<strong>Current Room:</strong> <span id="currentRoomName"></span> |
+			<strong>Users:</strong> <span id="roomUsersCount">0</span>
+		</div>
+
+		<div style="margin-top: 10px;">
+			<strong>Available Rooms:</strong>
+			<div id="roomsList" style="margin-top: 5px; font-size: 14px; color: #555;">
+				No active rooms
+			</div>
+		</div>
+	</div>
+
+	<div style="margin-bottom: 15px;">
+		<button id="startBtn">Start Talking</button>
+		<button id="muteBtn" style="display: none; margin-left: 10px; padding: 10px 20px; background: #ffc107; color: black; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">
+			🔇 Mute
+		</button>
+		<span id="statusMessage" style="margin-left: 20px; color: #e74c3c; font-weight: bold;"></span>
+	</div>
+
+	<!-- Audio Level Indicators -->
+	<div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; display: none;" id="audioLevelsPanel">
+		<h3 style="margin-top: 0;">🎤 Audio Levels</h3>
+
+		<div style="margin-bottom: 15px;">
+			<label style="display: block; margin-bottom: 5px; font-weight: bold;">Your Microphone:</label>
+			<div style="display: flex; align-items: center;">
+				<div class="audio-meter-container">
+					<div id="micAudioLevel" class="audio-meter-bar"></div>
+				</div>
+				<span id="micLevelText" style="margin-left: 10px; min-width: 60px; font-family: monospace;">0%</span>
+			</div>
+		</div>
+
+		<div>
+			<label style="display: block; margin-bottom: 5px; font-weight: bold;">Incoming Audio:</label>
+			<div style="display: flex; align-items: center;">
+				<div class="audio-meter-container">
+					<div id="incAudioLevel" class="audio-meter-bar" style="background: linear-gradient(90deg, #4caf50, #8bc34a, #cddc39);"></div>
+				</div>
+				<span id="incLevelText" style="margin-left: 10px; min-width: 60px; font-family: monospace;">0%</span>
+			</div>
+		</div>
+	</div>
+
+	<div style="margin: 20px 0; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+		<h3 style="margin-top: 0;">Audio Quality Settings</h3>
+		<p style="margin: 5px 0;">
+			<strong>Sample Rate:</strong> <span id="sampleRate"></span> Hz |
+			<strong>Bit Depth:</strong> <span id="bitRate"></span>-bit |
+			<strong>Chunk Size:</strong> <span id="chunkSize"></span> samples
+		</p>
+		<p style="margin: 5px 0; font-size: 12px; color: #666;">
+			💡 To change settings, edit <code>webcontent/js/config.js</code> and reload the page
+		</p>
+	</div>
+
 	<b>Mic audio</b><br>
 	<canvas style="border: 1px solid;" id="micaudio" width="1024" height="200"></canvas><br>
 
